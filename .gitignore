@@ -1,0 +1,4 @@
+node_modules/
+server/code.js
+.clasp.json
+.env

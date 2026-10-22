@@ -1,0 +1,798 @@
+{
+  "info": {
+    "_postman_id": "e7b84a95-9ac5-491f-a77f-ebb0a756ebea",
+    "name": "EmployeeAPI",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "30176986",
+    "description": "API HTTP para administrar empleados y solicitudes de permiso. Está construida con Google Apps Script y usa Google Sheets como base de datos.\n\n**URL base:** `https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec`\n\n**Respuesta exitosa**\n\n```json\n{ \"success\": true, \"data\": ... }\n```\n\n**Respuesta de error**\n\n```json\n{ \"success\": false, \"httpStatus\": 404, \"code\": \"NOT_FOUND\", \"error\": \"mensaje\", \"field\": \"campo\" }\n```\n\n`httpStatus` es el status lógico del contrato (Apps Script siempre responde HTTP 200) y `code` es estable para el cliente. `field` solo viene cuando el error es de validación e indica qué campo falló.\n\n**Códigos de error**\n\n`VALIDATION_ERROR` (400), `BAD_REQUEST` (400), `METHOD_NOT_ALLOWED` (405), `NOT_FOUND` (404), `CONFLICT` (409), `UNSUPPORTED_MEDIA_TYPE` (415), `INTERNAL_ERROR` (500).\n\n**Convenciones**\n\n- Las lecturas usan `GET` con `path` y los filtros (`id`, `employeeId`) en la URL.\n- Las escrituras usan `POST` con `path`, `action=create|update|delete|changeStatus` y el cuerpo JSON.\n- Todos los `POST` requieren `Content-Type: application/json`.\n- El `id` de `update`, `delete` y `changeStatus` va exclusivamente en el cuerpo; el `status` de `changeStatus` también.\n- Las fechas se envían y se devuelven como `YYYY-MM-DD`.\n- Los IDs se generan automáticamente con prefijo `EMP-` (empleados) o `LR-` (solicitudes).\n\n> Demo pública con datos ficticios. No usar información real o sensible."
+  },
+  "item": [
+    {
+      "name": "Employees",
+      "item": [
+        {
+          "name": "Get All",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=employees",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "employees"
+                }
+              ]
+            },
+            "description": "Devuelve todos los empleados.\n\n`GET ?path=employees`\n\nCada registro incluye `position` (título, descripción y banda salarial), `department` (nombre y descripción) y `manager` (nombre, correo y teléfono). Esos campos vienen en `null` cuando no hay relación o cuando el líder del departamento es el propio empleado."
+          },
+          "response": []
+        },
+        {
+          "name": "Get by ID",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=employees&id=EMP-550e8400-e29b-41d4-a716-446655440001",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "employees"
+                },
+                {
+                  "key": "id",
+                  "value": "EMP-550e8400-e29b-41d4-a716-446655440001"
+                }
+              ]
+            },
+            "description": "Devuelve un empleado por su ID (`EMP-<uuid>`).\n\n`GET ?path=employees&id={id}`\n\nIncluye las mismas relaciones que el listado: cargo, departamento y líder. Si el ID no existe, responde `404` con `code: \"NOT_FOUND\"`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"firstName\":\"Nicolas\",\r\n    \"lastName\": \"Cuervo\",\r\n    \"email\": \"jncuervo@gmail.com\",\r\n    \"phone\": 3126606400,\r\n    \"hireDate\": \"2026-08-01\",\r\n    \"employmentType\": \"PERMANENT\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=employees&action=create",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "employees"
+                },
+                {
+                  "key": "action",
+                  "value": "create"
+                }
+              ]
+            },
+            "description": "Crea un empleado.\n\n`POST ?path=employees&action=create`\n\n**Campos obligatorios**\n\n- `firstName`, `lastName`, `email`: texto no vacío.\n- `phone`: número JSON de 10 dígitos (celular que inicia en `3` o fijo que inicia en `60`). No se acepta como texto.\n- `hireDate`: fecha `YYYY-MM-DD` válida.\n- `employmentType`: `PERMANENT`, `FIXED_TERM` o `APPRENTICE`.\n\n**Opcional:** `positionId`.\n\nEl ID se genera con prefijo `EMP-` y el estado inicial es `ACTIVE`. El correo se guarda en minúsculas y no puede estar repetido; si ya existe, responde `409` con `code: \"CONFLICT\"`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"id\": \"EMP-49b10592-96c2-4016-b2c4-a825764acba8\",\r\n    \"employmentType\": \"APPRENTICE\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=employees&action=update",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "employees"
+                },
+                {
+                  "key": "action",
+                  "value": "update"
+                }
+              ]
+            },
+            "description": "Actualiza parcialmente un empleado.\n\n`POST ?path=employees&action=update`\n\nEl cuerpo debe incluir `id` y solo los campos que se quieren cambiar: `firstName`, `lastName`, `email`, `phone`, `hireDate`, `employmentType` o `positionId`. Cada campo enviado se valida con las mismas reglas de la creación y el `id` no se puede modificar. Si el correo ya pertenece a otro empleado, responde `409` con `code: \"CONFLICT\"`. Devuelve el empleado actualizado; si el ID no existe responde `404` con `code: \"NOT_FOUND\"`."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": \"EMP-49b10592-96c2-4016-b2c4-a825764acba8\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=employees&action=delete",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "employees"
+                },
+                {
+                  "key": "action",
+                  "value": "delete"
+                }
+              ]
+            },
+            "description": "Elimina un empleado.\n\n`POST ?path=employees&action=delete`\n\nEl cuerpo debe incluir `id`; si llega en la URL, la solicitud se rechaza. Devuelve `data: { id, deleted: true }`; si el ID no existe responde `404` con `code: \"NOT_FOUND\"`."
+          },
+          "response": []
+        },
+        {
+          "name": "Active",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": \"EMP-ed3835c5-2a3b-460e-bd41-a690fe897435\",\r\n  \"status\": \"ACTIVE\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=employees&action=changeStatus",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "employees"
+                },
+                {
+                  "key": "action",
+                  "value": "changeStatus"
+                }
+              ]
+            },
+            "description": "Cambia el estado del empleado a `ACTIVE`.\n\n`POST ?path=employees&action=changeStatus`\n\nCuerpo: `{ \"id\": \"EMP-...\", \"status\": \"ACTIVE\" }`. Solo se aceptan `ACTIVE`, `RETIRED` u `ON_LEAVE`; cualquier otro valor devuelve error con `field: \"status\"`. Devuelve el empleado actualizado; si el ID no existe responde `404` con `code: \"NOT_FOUND\"`."
+          },
+          "response": []
+        },
+        {
+          "name": "Retired",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": \"EMP-ed3835c5-2a3b-460e-bd41-a690fe897435\",\r\n  \"status\": \"RETIRED\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=employees&action=changeStatus",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "employees"
+                },
+                {
+                  "key": "action",
+                  "value": "changeStatus"
+                }
+              ]
+            },
+            "description": "Cambia el estado del empleado a `RETIRED` (retirado).\n\n`POST ?path=employees&action=changeStatus`\n\nCuerpo: `{ \"id\": \"EMP-...\", \"status\": \"RETIRED\" }`. Solo se aceptan `ACTIVE`, `RETIRED` u `ON_LEAVE`; cualquier otro valor devuelve error con `field: \"status\"`. Devuelve el empleado actualizado; si el ID no existe responde `404` con `code: \"NOT_FOUND\"`."
+          },
+          "response": []
+        },
+        {
+          "name": "On_Leave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": \"EMP-ed3835c5-2a3b-460e-bd41-a690fe897435\",\r\n  \"status\": \"ON_LEAVE\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=employees&action=changeStatus",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "employees"
+                },
+                {
+                  "key": "action",
+                  "value": "changeStatus"
+                }
+              ]
+            },
+            "description": "Cambia el estado del empleado a `ON_LEAVE` (en permiso).\n\n`POST ?path=employees&action=changeStatus`\n\nCuerpo: `{ \"id\": \"EMP-...\", \"status\": \"ON_LEAVE\" }`. Solo se aceptan `ACTIVE`, `RETIRED` u `ON_LEAVE`; cualquier otro valor devuelve error con `field: \"status\"`. Devuelve el empleado actualizado; si el ID no existe responde `404` con `code: \"NOT_FOUND\"`."
+          },
+          "response": []
+        }
+      ],
+      "description": "Operaciones sobre empleados. Todas las peticiones usan `path=employees`; las lecturas van por `GET` y las escrituras por `POST` con `action` en la URL.\n\nCada empleado se devuelve con su cargo (`position`), departamento (`department`) y líder (`manager`) resueltos desde las hojas relacionadas."
+    },
+    {
+      "name": "Leave",
+      "item": [
+        {
+          "name": "Get All",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=leaveRequests",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "leaveRequests"
+                }
+              ]
+            },
+            "description": "Devuelve todas las solicitudes de permiso.\n\n`GET ?path=leaveRequests`\n\nCada registro incluye `employee` (nombre, correo y teléfono), `reviewer` (`null` si aún no tiene revisor) y el tipo de permiso en `name` y `description`. El `leaveTypeId` se reemplaza por esos datos. Las fechas vienen en `YYYY-MM-DD`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get by ID",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=leaveRequests&id=LR-001",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "leaveRequests"
+                },
+                {
+                  "key": "id",
+                  "value": "LR-001"
+                }
+              ]
+            },
+            "description": "Devuelve una solicitud por su ID (`LR-<uuid>`).\n\n`GET ?path=leaveRequests&id={id}`\n\nIncluye empleado, revisor y tipo de permiso. Si el ID no existe, responde `404` con `code: \"NOT_FOUND\"`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get by EmployeeID",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=leaveRequests&employeeId=EMP-550e8400-e29b-41d4-a716-446655440016",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "leaveRequests"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "EMP-550e8400-e29b-41d4-a716-446655440016"
+                }
+              ]
+            },
+            "description": "Devuelve todas las solicitudes de un empleado.\n\n`GET ?path=leaveRequests&employeeId={employeeId}`\n\n`employeeId` es obligatorio y corresponde al ID del empleado (`EMP-...`). Devuelve un arreglo vacío si el empleado no tiene solicitudes. Si se envían `id` y `employeeId` a la vez, prevalece `id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"employeeId\": \"EMP-550e8400-e29b-41d4-a716-446655440016\",\r\n  \"leaveTypeId\": \"LEV-001\",\r\n  \"startDate\": \"2026-11-09\",\r\n  \"endDate\": \"2026-11-13\",\r\n  \"daysRequested\": 5,\r\n  \"reason\": \"Vacaciones familiares\",\r\n  \"reviewedBy\": \"EMP-550e8400-e29b-41d4-a716-446655440017\",\r\n  \"requestedAt\": \"2026-10-19\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=leaveRequests&action=create",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "leaveRequests"
+                },
+                {
+                  "key": "action",
+                  "value": "create"
+                }
+              ]
+            },
+            "description": "Crea una solicitud de permiso.\n\n`POST ?path=leaveRequests&action=create`\n\n**Campos obligatorios**\n\n- `employeeId`: ID del empleado (`EMP-...`).\n- `leaveTypeId`: ID del tipo de permiso (`LEV-...`).\n- `startDate` y `endDate`: fechas `YYYY-MM-DD` válidas (también se acepta un timestamp ISO y se recorta a la fecha).\n- `daysRequested`: número mayor que cero.\n- `reason`: texto no vacío.\n- `requestedAt`: fecha `YYYY-MM-DD` válida.\n\n**Opcional:** `reviewedBy` (ID del revisor); si se omite se guarda vacío.\n\nEl ID se genera con prefijo `LR-` y el estado inicial es `PENDING`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"id\": \"LR-884bca9a-005b-44e9-aad1-10e31e6c9eb0\",\r\n    \"reason\": \"Desacanso\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=leaveRequests&action=update",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "leaveRequests"
+                },
+                {
+                  "key": "action",
+                  "value": "update"
+                }
+              ]
+            },
+            "description": "Actualiza parcialmente una solicitud.\n\n`POST ?path=leaveRequests&action=update`\n\nEl cuerpo debe incluir `id` y solo los campos a cambiar: `employeeId`, `leaveTypeId`, `startDate`, `endDate`, `daysRequested`, `reason`, `reviewedBy` o `requestedAt`. Cada campo se valida con las mismas reglas de la creación y el `id` no se puede modificar. Devuelve la solicitud actualizada; si el ID no existe responde `404` con `code: \"NOT_FOUND\"`."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": \"LR-884bca9a-005b-44e9-aad1-10e31e6c9eb0\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=leaveRequests&action=delete",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "leaveRequests"
+                },
+                {
+                  "key": "action",
+                  "value": "delete"
+                }
+              ]
+            },
+            "description": "Elimina una solicitud.\n\n`POST ?path=leaveRequests&action=delete`\n\nEl cuerpo debe incluir `id`; si llega en la URL, la solicitud se rechaza. Devuelve `data: { id, deleted: true }`; si el ID no existe responde `404` con `code: \"NOT_FOUND\"`."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": \"LR-010\",\r\n  \"status\": \"APPROVED\",\r\n  \"reviewedBy\": \"EMP-550e8400-e29b-41d4-a716-446655440001\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=leaveRequests&action=changeStatus",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "leaveRequests"
+                },
+                {
+                  "key": "action",
+                  "value": "changeStatus"
+                }
+              ]
+            },
+            "description": "Aprueba una solicitud pendiente.\n\n`POST ?path=leaveRequests&action=changeStatus`\n\nCuerpo: `{ \"id\": \"LR-...\", \"status\": \"APPROVED\", \"reviewedBy\": \"EMP-...\" }`; `reviewedBy` es opcional. Solo se puede aprobar o rechazar una solicitud en estado `PENDING`; si ya fue aprobada o rechazada responde `409` con `code: \"CONFLICT\"`. Devuelve la solicitud actualizada; si el ID no existe responde `404` con `code: \"NOT_FOUND\"`."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": \"LR-010\",\r\n  \"status\": \"REJECTED\",\r\n  \"reviewedBy\": \"EMP-550e8400-e29b-41d4-a716-446655440001\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://script.google.com/macros/s/AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ/exec?path=leaveRequests&action=changeStatus",
+              "protocol": "https",
+              "host": [
+                "script",
+                "google",
+                "com"
+              ],
+              "path": [
+                "macros",
+                "s",
+                "AKfycbwkN2EvivHVhBzhHDTF7FuZPQfPy3p9xWFdKUsVeIYKVg7DeYTf52zGhNcsmPr-7mPJ",
+                "exec"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "leaveRequests"
+                },
+                {
+                  "key": "action",
+                  "value": "changeStatus"
+                }
+              ]
+            },
+            "description": "Rechaza una solicitud pendiente.\n\n`POST ?path=leaveRequests&action=changeStatus`\n\nCuerpo: `{ \"id\": \"LR-...\", \"status\": \"REJECTED\", \"reviewedBy\": \"EMP-...\" }`; `reviewedBy` es opcional. Solo se puede aprobar o rechazar una solicitud en estado `PENDING`; si ya fue aprobada o rechazada responde `409` con `code: \"CONFLICT\"`. Devuelve la solicitud actualizada; si el ID no existe responde `404` con `code: \"NOT_FOUND\"`."
+          },
+          "response": []
+        }
+      ],
+      "description": "Operaciones sobre solicitudes de permiso. Todas las peticiones usan `path=leaveRequests`; las lecturas van por `GET` y las escrituras por `POST` con `action` en la URL.\n\nCada solicitud se devuelve con el empleado (`employee`), el revisor (`reviewer`) y el tipo de permiso (`name` y `description`) resueltos desde las hojas relacionadas."
+    }
+  ]
+}
